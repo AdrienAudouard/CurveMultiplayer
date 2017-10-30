@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+<div class="container">
+    <div class="row">
+        <div class="col-4">
+
+            <input type="text" class="form-control" id="pseudo" placeholder="Entrer un pseudo">
+            <button type="button" class="btn btn-outline-primary" id="buttonPseudo">Valider</button>
+
+            <br />
+            <br />
+
+            <table >
+                <tbody id="listeJoueur"></tbody>
+            </table>
+
+            <br />
+
+            <button type="button" id="start" class="btn btn-danger">Commencer</button>
+            <p id="timer"></p>
+        </div>
+        <div class="col-8">
+            <canvas id="myCanvas" width="600px" height="600px"></canvas>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div id="tchat">
+            </div>
+            <input type="text" class="form-control" id="tchatText" placeholder="Entrer un message">
+        </div>
+    </div>
+</div>
+
+
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js"></script>
+
+<script src="http://localhost:8082/socket.io/socket.io.js"></script>
+<script src="js/GameFrameworkClient.js"></script>
+<script src="js/Game.js"></script>
+<script src="js/Input.js"></script>
+<script src="js/Renderer.js"></script>
+<script src="js/Tchat.js"></script>
+<script src="js/client.js"></script>
+
+</body>
+</html>
