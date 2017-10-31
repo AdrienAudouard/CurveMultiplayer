@@ -8,6 +8,7 @@ let input;
 let renderer;
 let gf;
 let tchat;
+let totalSkew = 0;
 
 function init() {
 
@@ -34,6 +35,7 @@ function init() {
     });
 
     socket.on('load', function (d) {
+        renderer.clearCanvas();
         game.load(d.data);
 
         game.joueurs.forEach((j) => {
@@ -73,13 +75,19 @@ function init() {
         renderer.render();
     });
 
-    socket.on('timer', function (t) {
-       renderer.renderTimer(t);
-    });
-
     socket.on('message', function (m) {
         console.log('Nouveau message: ' + m);
         tchat.message(m);
+    });
+
+    socket.on('time', function (d) {
+        totalSkew += d.lastUpdate - game.timeStamp;
+
+        if (Math.abs(totalSkew) > game.MAX_LATENCY) {
+            console.log('Request sync with server');
+            socket.emit('state');
+            totalSkew = 0;
+        }
     });
 
     socket.on('victory', function (d) {

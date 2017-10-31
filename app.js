@@ -1,11 +1,11 @@
-const express = require('express');
-const fs = require('fs');
-const app = express();
-const gamejs = require('./public/js/Game.js');
+var express = require('express');
+var fs = require('fs');
+var app = express();
+var gamejs = require('./public/js/Game.js');
 
-const Game = gamejs.Game;
+var Game = gamejs.Game;
 
-const game = new Game();
+var game = new Game();
 
 app.use(express.static(__dirname + '/public'));
 
@@ -13,14 +13,14 @@ app.use(express.static(__dirname + '/public'));
  * Create a server that listen on port 8082
  * @type {http.Server}
  */
-const server = app.listen(8082, function () {
-    const port = server.address().port;
+var server = app.listen(8082, function () {
+    var port = server.address().port;
     console.log('Server running at port %s', port);
 
 
 });
 
-const io = require('socket.io').listen(server);
+var io = require('socket.io').listen(server);
 
 /**
  * When a client is connected
@@ -93,21 +93,33 @@ io.sockets.on('connection', function (socket) {
         console.log('Nouveau message: ' + j.pseudo + ': ' + m)
     });
 
-    /**
-     * When a player die
-     */
-    game.on('die', function (d) {
-        io.emit('die', d);
-    });
-
-    /**
-     * When a player won the game
-     */
-    game.on('victory', function (d) {
-        game.win(d.winner);
+    socket.on('state', function () {
+        console.log('Request sync from ' + socket.id);
         socket.emit('load', { data: game.save() });
     });
 
+    var syncTimer = setInterval(function () {
+        socket.emit('time', {
+            updateCount: game.updateCount,
+            timeStamp: game.timeStamp
+        });
+    }, 2000);
+});
+
+/**
+ * When a player die
+ */
+game.on('die', function (d) {
+    io.emit('die', d);
+});
+
+/**
+ * When a player won the game
+ */
+game.on('victory', function (d) {
+    game.win(d.winner);
+    game.newGame();
+    io.emit('load', { data: game.save() });
 });
 
 app.use('/', function (req, res) {

@@ -16,6 +16,10 @@
         this.ctx = this.canvas.getContext('2d');
     };
 
+    Renderer.prototype.clearCanvas = function () {
+        this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+
     Renderer.prototype.render = function() {
         if (game.isStart) {
             this.ctx.clearRect(0, 0, canvas.width, canvas.height);

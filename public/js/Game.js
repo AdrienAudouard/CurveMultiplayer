@@ -12,6 +12,7 @@
         this.colors = ["#2ecc71", "#3498db", "#9b59b6", "#e74c3c", "#f1c40f", "#ecf0f1", "#95a5a6"];
         this.nextColor = 0;
         this.callbacks = {};
+        this.timeStamp = (new Date()).valueOf();
     };
 
     /**
@@ -26,9 +27,11 @@
         const isHost = this.joueurs.length === 0;
         const color = this.colors[this.nextColor];
 
+        let angle = Math.random() * (Math.PI * 2);
+
         this.nextColor += 1;
 
-        let joueur = new Joueur(x, y, 1, 1, color, id, isHost, "Joueur " + this.joueurs.length);
+        let joueur = new Joueur(x, y, angle, color, id, isHost, "Joueur " + this.joueurs.length);
 
         this.joueurs.push(joueur);
 
@@ -57,7 +60,7 @@
         console.log('Joueur ' + id + ' quitte le jeu');
         let j = this.getPlayer(id);
 
-        this.joueurs = this.joueurs.filter(item => item.id != id);
+        this.joueurs = this.joueurs.filter(item => item.id !== id);
 
         if (this.joueurs.length > 0) {
             this.joueurs[0].isHost = true;
@@ -133,7 +136,7 @@
      * @returns {*} null is no player has this id, the player if a player if found
      */
     Game.prototype.getPlayer = function (id) {
-        for(var i = 0; i < this.joueurs.length; i++) {
+        for(let i = 0; i < this.joueurs.length; i++) {
             if (this.joueurs[i].id == id) return this.joueurs[i];
         }
     };
@@ -143,13 +146,17 @@
      * @param interval interval between each update
      */
     Game.prototype.updateEvery = function(interval){
-        var lastUpdate = (new Date()).valueOf();
-        var ctx = this;
+        let lastUpdate = (new Date()).valueOf();
+        let ctx = this;
         this.timer = setInterval(function() {
-            var date = (new Date()).valueOf();
+            let date = (new Date()).valueOf();
             if (date - lastUpdate >= interval) {
-                ctx.update(date);
                 lastUpdate += interval;
+                let delta = date - this.timeStamp;
+                this.timeStamp += delta;
+                ctx.update(date);
+
+
             }
         }, 1);
     };
@@ -158,6 +165,7 @@
      * Update the position of all players
      */
     Game.prototype.update = function () {
+
         this.updateCount ++;
         this.joueurs.forEach((j) => {
             if (j.isDead) { return; }
@@ -167,12 +175,12 @@
                 this.die(j.id);
                 this.callback_('die', { id: j.id});
 
-                if (this.playerAlive() == 1) {
+                if (this.playerAlive() === 1) {
                     let winnerId = this.winner();
                     this.callback_('victory', { winner:  winnerId});
                 }
             }
-        })
+        });
     };
 
     /**
@@ -181,7 +189,28 @@
      * @returns {boolean} true is a collision is detected, false if no collision are detected
      */
     Game.prototype.collision = function (j) {
-        return j.x < 0 || j.y < 0 || j.x + j.width > this.width || j.y + j.height > this.height;
+        if  (j.x < 0 || j.y < 0 || j.x + j.width > this.width || j.y + j.height > this.height) {
+            return true;
+        }
+
+        for (let i = 0; i < this.joueurs.length; i++) {
+            let j2 = this.joueurs[i];
+
+            let delta = (j2.pseudo == j.pseudo) ? '60' : 0;
+
+            for (let k = 0; k < j2.trace.length - delta; k++) {
+                let t = j2.trace[k];
+
+                let d = (j.x - t.x) * (j.x - t.x) + (j.y - t.y) * (j.y - t.y);
+
+                if (d < (t.width / 2) * (t.width / 2)) {
+                    console.log('Collision de ' + j.pseudo + ' avec ' + j2.pseudo);
+                    return true;
+                }
+            }
+        }
+
+        return false;
 
 
     };
@@ -207,9 +236,14 @@
      * @param id id of the player
      */
     Game.prototype.win = function (id) {
+        this.joueurs.forEach(function (j) {
+            j.lastwinner = false;
+        });
+
         let j = this.getPlayer(id);
 
         if (j) {
+            j.lastwinner = true;
             j.score += 1;
             console.log(j.pseudo + ' a gagné la partie');
         }
@@ -221,12 +255,17 @@
     Game.prototype.newGame = function () {
         this.isStart = false;
 
+        clearInterval(this.timer);
+
         this.joueurs.forEach((j) => {
-            const x = Math.random() * 380;
-            const y = Math.random() * 280;
+            let x = Math.random() * 380;
+            let y = Math.random() * 280;
 
             j.x = x;
             j.y = y;
+            j.vY = 1;
+            j.isDead = false;
+            j.vX = 1;
             j.trace = [];
             j.trace.push({ x: x, y: y, width: j.width });
         });
@@ -236,7 +275,7 @@
      * Search the player that won the game
      */
     Game.prototype.winner = function () {
-        for (var i = 0; i < this.joueurs.length; i++) {
+        for (let i = 0; i < this.joueurs.length; i++) {
             if (!this.joueurs[i].isDead) {
                 return this.joueurs[i].id;
             }
@@ -248,8 +287,9 @@
      * @returns {{isStart: *, joueurs: Array}} state of the game
      */
     Game.prototype.save = function () {
-      var serialized = {
+      let serialized = {
          isStart: this.isStart,
+          timeStamp: this.timeStamp,
           joueurs: []
       };
 
@@ -265,16 +305,27 @@
      * @param data state of the game
      */
     Game.prototype.load = function (data) {
-      this.isStart = data.isStart;
+        console.log(data);
 
-      data.joueurs.forEach((j) => {
-          this.join(j)
-      });
+        clearInterval(this.timer);
+
+        this.isStart = data.isStart;
+        this.timeStamp = data.timeStamp;
+        this.joueurs = [];
+        data.joueurs.forEach((j) => {
+              this.join(j)
+        });
+
+        if (this.isStart) {
+            this.updateEvery(this.UPDATE_INTERVAL);
+        }
+
+        console.log(this.joueurs);
 
     };
 
     Game.prototype.callback_ = function (event, data) {
-        var callback = this.callbacks[event];
+        let callback = this.callbacks[event];
 
         if (callback) {
             callback(data);
@@ -289,11 +340,11 @@
 
 
    let Joueur = class Joueur {
-       constructor(x, y, vX, vY, couleur, id, isHost, pseudo) {
+       constructor(x, y, angle, couleur, id, isHost, pseudo) {
            this.x = x;
            this.y = y;
-           this.vX = vX;
-           this.vY = vY;
+           this.vX = Math.cos(angle);
+           this.vY = Math.sin(angle);
            this.couleur = couleur;
            this.id = id;
            this.isHost = isHost;
@@ -305,29 +356,34 @@
            this.rightPress = false;
            this.accX = 0;
            this.accY = 0;
-           this.angle = 0;
+           this.angle = angle;
            this.trace = [];
            this.score = 0;
            this.isDead = false;
            this.trace.push({ x: this.x, y: this.y });
+           this.lastwinner = false;
        }
 
+       /**
+        * Update the position of the player
+        */
        update() {
            if (this.isDead) { return; }
 
-           this.trace.push({ x: this.x, y: this.y + this.width / 2 });
+           this.trace.push({ x: this.x, y: this.y + this.width / 2, width: this.width });
 
 
            if (this.leftPress) {
+
+               this.vX = Math.cos(this.angle);
+               this.vY = Math.sin(this.angle);
+
                this.angle += 0.025;
-
-               this.vX = Math.cos(this.angle);
-               this.vY = Math.sin(this.angle);
            } else if (this.rightPress) {
-               this.angle -= 0.025;
-
                this.vX = Math.cos(this.angle);
                this.vY = Math.sin(this.angle);
+
+               this.angle -= 0.025;
            }
 
            this.x += this.vX;
@@ -335,7 +391,11 @@
        }
 
 
-       getHtmlText(id) {
+       /**
+        * Return the html text for the #listeJoueur table
+        * @returns {string} html text
+        */
+       getHtmlText() {
            return `<tr>
                     <th>${this.isPlayer ? "&#9733;" : ""}</th>
                     <th>${this.isHost ? "Host" : ""}</th>
@@ -343,9 +403,14 @@
                     <th><span class="color-joueur" style="background-color: ${this.couleur}">   </span></th>
                     <th>${this.score}</th>
                     <th>${this.isDead ? "&#x2620;" : ""}</th>
+                    <th>${this.lastwinner ? "&#x263A;" : ""}</th>
                 </tr>`;
        }
 
+       /**
+        * Update the player from a json object J
+        * @param j JSON Object
+        */
        init(j) {
            this.x = j.x;
            this.y = j.y;
@@ -364,9 +429,15 @@
            this.angle = j.angle;
            this.trace = j.trace;
            this.score = j.score;
+           this.angle = j.angle;
            this.isDead = j.isDead;
+           this.lastwinner = j.lastwinner;
        }
-       
+
+       /**
+        *
+        * @returns {{}}
+        */
        toJSON() {
            var obj = {};
            for (var prop in this) {
@@ -379,7 +450,16 @@
 
    };
 
+   let Point = class Point {
+       constructor(x, y) {
+           this.x = x;
+           this.y = y;
+       }
+
+   };
+
    exports.Joueur = Joueur;
    exports.Game = Game;
+   exports.Point = Point;
 
 })(typeof global === "undefined" ? window : exports);
