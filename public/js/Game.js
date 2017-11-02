@@ -208,12 +208,12 @@
             }
         });
 
-        for (var i = 0; i < this.bonus.length; i++) {
+        for (let i = 0; i < this.bonus.length; i++) {
             let b = this.bonus[i];
 
             if (b.estTouche) continue;
 
-            for (var j = 0; j < this.joueurs.length; j++) {
+            for (let j = 0; j < this.joueurs.length; j++) {
                 let joueur = this.joueurs[j];
 
                 if (this.collisionBonus(b, joueur)) {
@@ -535,7 +535,8 @@
             let json = {
                 x: this.x,
                 y: this.y,
-                type: this.type
+                type: this.type,
+                id: this.id
             };
 
             return json;
@@ -551,10 +552,12 @@
             super(x, y, game);
             this.type = 'BonusRoblochon';
             this.game = game;
+            this.vEnleve = 0;
         }
 
         applyBonus(o, game) {
-            o.baseVitesse -= 0.5;
+            this.vEnleve = o.baseVitesse * 0.5;
+            o.baseVitesse -= this.vEnleve;
             let pseudo = 'Roblochon(' + o.pseudo + ')';
             game.callback_('rename', {id: o.id, pseudo: pseudo});
 
@@ -563,7 +566,7 @@
         }
 
         removeBonus(o) {
-            o.baseVitesse += 0.5;
+            o.baseVitesse += this.vEnleve;
         }
 
         draw(context) {

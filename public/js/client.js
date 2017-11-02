@@ -49,6 +49,9 @@ function init() {
 
     socket.on('leave', function (id) {
        game.leave(id);
+        game.joueurs.forEach((j) => {
+            renderer.renderPlayer(j);
+        });
        renderer.renderTableJoueurs();
     });
 
@@ -79,7 +82,7 @@ function init() {
 
     socket.on('time', function (d) {
         totalSkew += d.lastUpdate - game.timeStamp;
-
+        console.log('totalSkew: ' + totalSkew);
         if (Math.abs(totalSkew) > game.MAX_LATENCY) {
             console.log('Request sync with server');
             socket.emit('state');
@@ -90,11 +93,17 @@ function init() {
     socket.on('add bonus', function (d) {
         let b = new BonusRoblochon(d.id, d.x, d.y, game);
         game.addBonus(b);
+
+        console.log(game.bonus);
     });
 
     socket.on('touch bonus', function (d) {
+        console.log(d);
+
         let b = game.getBonus(d.bonus);
         let j = game.getPlayer(d.joueur);
+
+        console.log(b);
 
         b.applyBonus(j, game);
         b.estTouche = true;
