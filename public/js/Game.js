@@ -13,6 +13,8 @@
         this.nextColor = 0;
         this.callbacks = {};
         this.timeStamp = (new Date()).valueOf();
+        this.bonus = [];
+        this.idBonus = 0;
     };
 
     /**
@@ -21,8 +23,8 @@
      * @returns {Joueur} return the player created
      */
     Game.prototype.createPlayer = function (id) {
-        const x = Math.random() * 380;
-        const y = Math.random() * 280;
+        const x = 10 + Math.random() * this.width - 30;
+        const y = 10 + Math.random() * this.height - 30;
 
         const isHost = this.joueurs.length === 0;
         const color = this.colors[this.nextColor];
@@ -130,6 +132,26 @@
       }
     };
 
+    Game.prototype.createBonus = function () {
+        let x = Math.random() * this.width - 35;
+        let y = Math.random() * this.height - 35;
+        let id = this.idBonus;
+
+        this.idBonus++;
+
+        let b = new BonusRoblochon(id, x, y, this);
+
+        return b;
+    };
+
+    Game.prototype.addBonus = function (b) {
+        this.bonus.push(b);
+    };
+
+    Game.prototype.removeBonus = function (b) {
+        this.bonus = this.bonus.filter(item => (item.id != b.id));
+    };
+
     /**
      * Return a player with a specific id
      * @param id Id of the player
@@ -138,6 +160,12 @@
     Game.prototype.getPlayer = function (id) {
         for(let i = 0; i < this.joueurs.length; i++) {
             if (this.joueurs[i].id == id) return this.joueurs[i];
+        }
+    };
+
+    Game.prototype.getBonus = function (id) {
+        for(let i = 0; i < this.bonus.length; i++) {
+            if (this.bonus[i].id == id) return this.bonus[i];
         }
     };
 
@@ -155,8 +183,6 @@
                 let delta = date - this.timeStamp;
                 this.timeStamp += delta;
                 ctx.update(date);
-
-
             }
         }, 1);
     };
@@ -181,6 +207,23 @@
                 }
             }
         });
+
+        for (var i = 0; i < this.bonus.length; i++) {
+            let b = this.bonus[i];
+
+            if (b.estTouche) continue;
+
+            for (var j = 0; j < this.joueurs.length; j++) {
+                let joueur = this.joueurs[j];
+
+                if (this.collisionBonus(b, joueur)) {
+                    this.callback_('touch bonus', {bonus: b.id, joueur: joueur.id});
+
+                    break;
+                }
+            }
+
+        }
     };
 
     /**
@@ -196,7 +239,7 @@
         for (let i = 0; i < this.joueurs.length; i++) {
             let j2 = this.joueurs[i];
 
-            let delta = (j2.pseudo == j.pseudo) ? '60' : 0;
+            let delta = (j2.pseudo == j.pseudo) ? '120' : 0;
 
             for (let k = 0; k < j2.trace.length - delta; k++) {
                 let t = j2.trace[k];
@@ -211,8 +254,12 @@
         }
 
         return false;
+    };
 
+    Game.prototype.collisionBonus = function (b, j) {
+        let d = (j.centre().x - b.centre().x) * (j.centre().x - b.centre().x) + (j.centre().y - b.centre().y) * (j.centre().y - b.centre().y);
 
+        return d <= (j.width / 2 + b.rayon) * (j.width / 2 + b.rayon);
     };
 
     /**
@@ -343,8 +390,9 @@
        constructor(x, y, angle, couleur, id, isHost, pseudo) {
            this.x = x;
            this.y = y;
-           this.vX = Math.cos(angle);
-           this.vY = Math.sin(angle);
+           this.baseVitesse = 1;
+           this.vX = this.baseVitesse * Math.cos(angle);
+           this.vY = this.baseVitesse * Math.sin(angle);
            this.couleur = couleur;
            this.id = id;
            this.isHost = isHost;
@@ -372,22 +420,24 @@
 
            this.trace.push({ x: this.x, y: this.y + this.width / 2, width: this.width });
 
-
            if (this.leftPress) {
-
-               this.vX = Math.cos(this.angle);
-               this.vY = Math.sin(this.angle);
-
                this.angle += 0.025;
            } else if (this.rightPress) {
-               this.vX = Math.cos(this.angle);
-               this.vY = Math.sin(this.angle);
-
                this.angle -= 0.025;
            }
 
+           this.vX = this.baseVitesse * Math.cos(this.angle);
+           this.vY = this.baseVitesse * Math.sin(this.angle);
+
            this.x += this.vX;
            this.y += this.vY;
+       }
+
+       centre() {
+           return {
+               x: this.x + this.width / 2,
+               y: this.y + this.height / 2
+           }
        }
 
 
@@ -432,6 +482,7 @@
            this.angle = j.angle;
            this.isDead = j.isDead;
            this.lastwinner = j.lastwinner;
+           this.baseVitesse = j.baseVitesse;
        }
 
        /**
@@ -458,8 +509,115 @@
 
    };
 
+    let Bonus = class Bonus {
+        constructor(id, x, y, game) {
+            this.id = id;
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.type = '';
+            this.estTouche = false;
+            this.rayon = 35/2;
+        }
+
+        centre() {
+            return {
+                x: this.x + 35 / 2,
+                y: this.y + 35 / 2
+            }
+        }
+
+        applyBonus(o) {}
+
+        removeBonus(o) {}
+
+        toJSON() {
+            let json = {
+                x: this.x,
+                y: this.y,
+                type: this.type
+            };
+
+            return json;
+        }
+
+        draw(context) {
+            if (this.estTouche) return;
+        }
+    };
+
+    let BonusRoblochon = class BonusRoblochon extends Bonus {
+        constructor(x, y, game) {
+            super(x, y, game);
+            this.type = 'BonusRoblochon';
+            this.game = game;
+        }
+
+        applyBonus(o, game) {
+            o.baseVitesse -= 0.5;
+            let pseudo = 'Roblochon(' + o.pseudo + ')';
+            game.callback_('rename', {id: o.id, pseudo: pseudo});
+
+
+            return 5000;
+        }
+
+        removeBonus(o) {
+            o.baseVitesse += 0.5;
+        }
+
+        draw(context) {
+            if (this.estTouche) return;
+
+            context.save();
+            context.translate(this.x, this.y);
+
+            //// Color Declarations
+            var color = 'rgba(65, 131, 215, 1)';
+
+            //// Oval Drawing
+            oval(context, 0, 0, 35, 35);
+            context.fillStyle = color;
+            context.fill();
+
+
+            //// Rectangle Drawing
+            context.beginPath();
+            context.rect(3, 19, 28, 3);
+            context.fillStyle = 'rgb(255, 255, 255)';
+            context.fill();
+
+
+            //// Oval 2 Drawing
+            oval(context, 10, 10, 22, 17);
+            context.fillStyle = 'rgb(255, 255, 255)';
+            context.fill();
+
+
+            //// Rectangle 2 Drawing
+            context.beginPath();
+            context.rect(3, 22, 28, 5);
+            context.fillStyle = color;
+            context.fill();
+
+            context.restore();
+        }
+    };
+
+    function oval(context, x, y, w, h) {
+        context.save();
+        context.beginPath();
+        context.translate(x, y);
+        context.scale(w/2, h/2);
+        context.arc(1, 1, 1, 0, 2*Math.PI, false);
+        context.closePath();
+        context.restore();
+    }
+
    exports.Joueur = Joueur;
    exports.Game = Game;
    exports.Point = Point;
+   exports.Bonus = Bonus;
+   exports.BonusRoblochon = BonusRoblochon;
 
 })(typeof global === "undefined" ? window : exports);

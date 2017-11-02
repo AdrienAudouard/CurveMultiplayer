@@ -29,6 +29,12 @@
             joueurs.forEach((j) => {
                 this.renderPlayer(j)
             });
+
+            let bonus = this.game.bonus;
+
+            bonus.forEach( (b) => {
+                b.draw(this.ctx);
+            });
         }
 
         var ctx = this;

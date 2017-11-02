@@ -11,7 +11,6 @@ let tchat;
 let totalSkew = 0;
 
 function init() {
-
     canvas = document.querySelector("#myCanvas");
     listeJoueur = document.querySelector("#listeJoueur");
     ctx = canvas.getContext("2d");
@@ -20,8 +19,6 @@ function init() {
     input = new Input(game, document, socket);
     renderer = new Renderer(game);
     tchat = new Tchat(socket);
-
-    gf = new GameFrameworkClient(canvas, ctx, socket, listeJoueur);
 
     socket.on('id', function (id) {
        game.id = id;
@@ -88,6 +85,28 @@ function init() {
             socket.emit('state');
             totalSkew = 0;
         }
+    });
+
+    socket.on('add bonus', function (d) {
+        let b = new BonusRoblochon(d.id, d.x, d.y, game);
+        game.addBonus(b);
+    });
+
+    socket.on('touch bonus', function (d) {
+        let b = game.getBonus(d.bonus);
+        let j = game.getPlayer(d.joueur);
+
+        b.applyBonus(j, game);
+        b.estTouche = true;
+    });
+
+    socket.on('end bonus', function (d) {
+        let b = game.getBonus(d.bonus);
+        let j = game.getPlayer(d.joueur);
+
+        b.removeBonus(j);
+
+        game.removeBonus(b);
     });
 
     socket.on('victory', function (d) {

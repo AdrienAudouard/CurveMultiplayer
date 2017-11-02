@@ -1,11 +1,14 @@
 var express = require('express');
 var fs = require('fs');
 var app = express();
-var gamejs = require('./public/js/Game.js');
 
+var gamejs = require('./public/js/Game.js');
 var Game = gamejs.Game;
 
 var game = new Game();
+
+let BonusType = ["BonusRoblochon"];
+let bonusTimer;
 
 app.use(express.static(__dirname + '/public'));
 
@@ -16,7 +19,6 @@ app.use(express.static(__dirname + '/public'));
 var server = app.listen(8082, function () {
     var port = server.address().port;
     console.log('Server running at port %s', port);
-
 
 });
 
@@ -53,7 +55,9 @@ io.sockets.on('connection', function (socket) {
     socket.on('leave', function () {
         let t = game.leave(socket.id);
         io.emit('leave', socket.id);
-        io.emit('<i>' + t + ' a quitté le jeu</i>');
+        io.emit('message'  ,'<i>' + t + ' a quitté le jeu</i>');
+        console.log(game.joueurs.length + ' joueur(s) dans le salon');
+
     });
 
     /**
@@ -65,8 +69,17 @@ io.sockets.on('connection', function (socket) {
             game.updateEvery(game.UPDATE_INTERVAL);
             io.emit('start');
             io.emit('message', '<i>Début de la partie</i>');
+
+            bonusTimer = setInterval(() => {
+                //console.log('Apparition d\'un bonus');
+                var b = game.createBonus();
+                game.addBonus(b);
+                io.emit('add bonus', b.toJSON());
+            }, 2000);
         }
     });
+
+
 
     /**
      * When the client turn left
@@ -103,7 +116,7 @@ io.sockets.on('connection', function (socket) {
             updateCount: game.updateCount,
             timeStamp: game.timeStamp
         });
-    }, 2000);
+    }, 7000);
 });
 
 /**
@@ -117,9 +130,55 @@ game.on('die', function (d) {
  * When a player won the game
  */
 game.on('victory', function (d) {
+    clearInterval(bonusTimer);
     game.win(d.winner);
     game.newGame();
     io.emit('load', { data: game.save() });
+});
+
+game.on('rename', function (d) {
+    io.emit('rename', { id: d.id, pseudo: d.pseudo });
+});
+
+game.on('bonus', function (d) {
+   io.emit('bonus', d);
+});
+
+game.on('touch bonus', function (d) {
+    let b = game.getBonus(d.bonus);
+    let j = game.getPlayer(d.joueur);
+
+    let t = b.applyBonus(j, game);
+    b.estTouche = true;
+
+    io.emit('touch bonus', d);
+
+    console.log('Touche le bonus');
+
+    sleep(t);
+
+    setTimeout(() => {
+        console.log('Fin du bonus');
+
+        b.removeBonus(j);
+
+        game.removeBonus(b);
+
+        io.emit('end bonus', d);
+    }, t);
+
+
+});
+
+game.on('end bonus', function (d) {
+    let b = game.getBonus(d.bonus);
+    let j = game.getPlayer(d.joueur);
+
+    b.removeBonus(j);
+
+    game.removeBonus(b);
+
+    io.emit('end bonus', d);
 });
 
 app.use('/', function (req, res) {
@@ -138,3 +197,7 @@ app.use(function(req, res, next) {
     err.status = 404;
     next(err);
 });
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
