@@ -45,6 +45,7 @@ function init() {
     socket.on('rename', function (d) {
        game.rename(d.id, d.pseudo);
        renderer.renderTableJoueurs();
+       document.cookie = "pseudo="+d.pseudo;
     });
 
     socket.on('leave', function (id) {
@@ -121,6 +122,4 @@ function init() {
     socket.on('victory', function (d) {
         game.win(d.winner);
     });
-
-    socket.emit('connection');
 }

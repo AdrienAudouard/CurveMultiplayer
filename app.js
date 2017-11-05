@@ -1,11 +1,13 @@
-var express = require('express');
-var fs = require('fs');
-var app = express();
+let express = require('express');
+let fs = require('fs');
+let cookieParser = require('socket.io-cookie');
 
-var gamejs = require('./public/js/Game.js');
-var Game = gamejs.Game;
+let app = express();
 
-var game = new Game();
+let gamejs = require('./public/js/Game.js');
+let Game = gamejs.Game;
+
+let game = new Game();
 
 let BonusType = ["BonusRoblochon"];
 let bonusTimer;
@@ -16,24 +18,30 @@ app.use(express.static(__dirname + '/public'));
  * Create a server that listen on port 8082
  * @type {http.Server}
  */
-var server = app.listen(8082, function () {
-    var port = server.address().port;
+let server = app.listen(8082, function () {
+    let port = server.address().port;
     console.log('Server running at port %s', port);
-
 });
 
-var io = require('socket.io').listen(server);
+let io = require('socket.io').listen(server);
+
+io.use(cookieParser);
 
 /**
  * When a client is connected
  */
 io.sockets.on('connection', function (socket) {
-
    console.log('Client connected ' + socket.id);
 
    socket.emit('id', socket.id);
 
-    let joueur = game.createPlayer(socket.id);
+   let pseudo = '';
+
+   if (socket.request.headers.cookie.pseudo) {
+       pseudo = socket.request.headers.cookie.pseudo;
+   }
+
+    let joueur = game.createPlayer(socket.id, pseudo);
 
     socket.emit('load', { data: game.save() });
 
@@ -64,9 +72,11 @@ io.sockets.on('connection', function (socket) {
      * When the host start the game
      */
     socket.on('start', function () {
+        if (game.joueurs.length < 2 || game.isStart) { return; }
         if (game.getPlayer(socket.id).isHost) {
             console.log('Debut de la partie');
             game.updateEvery(game.UPDATE_INTERVAL);
+            game.isStart = true;
             io.emit('start');
             io.emit('message', '<i>Début de la partie</i>');
 
@@ -75,7 +85,7 @@ io.sockets.on('connection', function (socket) {
                 var b = game.createBonus();
                 game.addBonus(b);
                 io.emit('add bonus', b.toJSON());
-            }, 2000);
+            }, 7000);
         }
     });
 
@@ -116,7 +126,7 @@ io.sockets.on('connection', function (socket) {
             updateCount: game.updateCount,
             timeStamp: game.timeStamp
         });
-    }, 7000);
+    }, 2000);
 });
 
 /**

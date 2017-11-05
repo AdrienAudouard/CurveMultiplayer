@@ -22,22 +22,33 @@
      * @param id id of the new player
      * @returns {Joueur} return the player created
      */
-    Game.prototype.createPlayer = function (id) {
-        const x = 10 + Math.random() * this.width - 30;
-        const y = 10 + Math.random() * this.height - 30;
+    Game.prototype.createPlayer = function (id, p) {
+        let x = 10 + Math.random() * this.width - 30;
+        let y = 10 + Math.random() * this.height - 30;
 
-        const isHost = this.joueurs.length === 0;
-        const color = this.colors[this.nextColor];
+        let isHost = this.joueurs.length === 0;
+        let color = this.colors[this.nextColor];
 
-        let angle = Math.random() * (Math.PI * 2);
+        let angle = this.calculerAngle(x, y);
+
+        let pseudo = (p != '') ? p : "Joueur " + this.joueurs.length;
 
         this.nextColor += 1;
 
-        let joueur = new Joueur(x, y, angle, color, id, isHost, "Joueur " + this.joueurs.length);
+        let joueur = new Joueur(x, y, angle, color, id, isHost, pseudo);
 
         this.joueurs.push(joueur);
 
         return joueur;
+    };
+
+    Game.prototype.calculerAngle = function (x, y) {
+        let midX = this.width / 2;
+        let midY = this.height / 2;
+
+        let angle = Math.atan((midY - y) / (midX - x)) + ((x > midX) ? Math.PI : 0);
+
+        return angle;
     };
 
     /**

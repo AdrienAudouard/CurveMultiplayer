@@ -1,6 +1,6 @@
 # Curve Multiplayer
 
-A multiplayer game inspired by http://curvefever.io/
+A multiplayer game inspired by [CurveFever.io](http://curvefever.io/)
 
 ## Running
 
