@@ -9,6 +9,9 @@ let renderer;
 let gf;
 let tchat;
 let totalSkew = 0;
+let startTime;
+let syncTimer;
+//172.20.10.6
 
 function init() {
     canvas = document.querySelector("#myCanvas");
@@ -81,9 +84,15 @@ function init() {
         tchat.message(m);
     });
 
-    socket.on('time', function (d) {
-        totalSkew += d.lastUpdate - game.timeStamp;
-        console.log('totalSkew: ' + totalSkew);
+    syncTimer = setInterval(function () {
+        startTime = Date.now();
+        socket.emit('ping');
+    }, 2000);
+
+    socket.on('pong', function () {
+       totalSkew += Math.abs(Date.now() - startTime);
+       console.log('totalSkew: ' + totalSkew);
+
         if (Math.abs(totalSkew) > game.MAX_LATENCY) {
             console.log('Request sync with server');
             socket.emit('state');

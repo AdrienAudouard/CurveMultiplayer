@@ -12,7 +12,7 @@ let game = new Game();
 let BonusType = ["BonusRoblochon"];
 let bonusTimer;
 
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname));
 
 /**
  * Create a server that listen on port 8082
@@ -37,9 +37,12 @@ io.sockets.on('connection', function (socket) {
 
    let pseudo = '';
 
+   /*
    if (socket.request.headers.cookie.pseudo) {
        pseudo = socket.request.headers.cookie.pseudo;
    }
+
+   */
 
     let joueur = game.createPlayer(socket.id, pseudo);
 
@@ -121,12 +124,11 @@ io.sockets.on('connection', function (socket) {
         socket.emit('load', { data: game.save() });
     });
 
-    var syncTimer = setInterval(function () {
-        socket.emit('time', {
-            updateCount: game.updateCount,
-            timeStamp: game.timeStamp
-        });
-    }, 2000);
+    socket.on('ping', function () {
+       socket.emit('pong');
+    });
+
+
 });
 
 /**

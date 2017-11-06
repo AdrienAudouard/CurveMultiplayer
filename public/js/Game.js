@@ -318,9 +318,10 @@
         this.joueurs.forEach((j) => {
             let x = Math.random() * 380;
             let y = Math.random() * 280;
-
+            let angle = this.calculerAngle(x, y)
             j.x = x;
             j.y = y;
+            j.angle = angle;
             j.vY = 1;
             j.isDead = false;
             j.vX = 1;
@@ -464,7 +465,7 @@
                     <th><span class="color-joueur" style="background-color: ${this.couleur}">   </span></th>
                     <th>${this.score}</th>
                     <th>${this.isDead ? "&#x2620;" : ""}</th>
-                    <th>${this.lastwinner ? "&#x263A;" : ""}</th>
+                    <th>${this.lastwinner ? "🙂" : ""}</th>
                 </tr>`;
        }
 
